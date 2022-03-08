@@ -1,0 +1,104 @@
+_schema-version: "3.2"
+ID: createsupplierprj
+version: 0.0.1
+modules:
+- name: createsupplierwfmd
+  type: com.sap.application.content
+  path: createsupplierwfmd
+  requires:
+  - name: workflow
+    parameters:
+      content-target: true
+- name: createsupplierprj-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: createsupplierprj-destination-service
+    parameters:
+      content-target: true
+  - name: createsupplierprj_html_repo_host
+    parameters:
+      service-key:
+        name: createsupplierprj_html_repo_host-key
+  - name: uaa_createsupplierprj
+    parameters:
+      service-key:
+        name: uaa_createsupplierprj-key
+  parameters:
+    content:
+      subaccount:
+        destinations:
+        - Name: createsupplierapprt_createsupplierprj_html_repo_host
+          ServiceInstanceName: createsupplierprj-html5-app-host-service
+          ServiceKeyName: createsupplierprj_html_repo_host-key
+          sap.cloud.service: createsupplierapprt
+        - Authentication: OAuth2UserTokenExchange
+          Name: createsupplierapprt_uaa_createsupplierprj
+          ServiceInstanceName: createsupplierprj-xsuaa-service
+          ServiceKeyName: uaa_createsupplierprj-key
+          sap.cloud.service: createsupplierapprt
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: createsupplierprj-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: createsupplierprj_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - comtsmdguiapprovesupplierui.zip
+      name: comtsmdguiapprovesupplierui
+      target-path: resources/
+- name: comtsmdguiapprovesupplierui
+  type: html5
+  path: approvesupplierui
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: workflow
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: workflow
+    service-plan: lite
+- name: createsupplierprj-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        subaccount:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: createsupplierprj-destination-service
+    service-plan: lite
+- name: createsupplierprj_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: createsupplierprj-html5-app-host-service
+    service-plan: app-host
+- name: uaa_createsupplierprj
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: createsupplierprj-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
